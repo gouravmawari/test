@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Helio — Conversation Analysis Report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f4f3ef;
+    color: #1a1917;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .report-header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 2px solid #1a1917; padding-bottom: 16px; margin-bottom: 40px;
+  }
+  .report-title { font-size: 26px; font-weight: 600; letter-spacing: -0.5px; }
+  .report-sub { font-size: 13px; color: #666; margin-top: 4px; }
+  .report-meta { font-size: 12px; color: #999; text-align: right; }
+
+  h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #666;
+    margin: 48px 0 20px; padding-bottom: 8px;
+    border-bottom: 0.5px solid #ddd;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px; margin-bottom: 8px;
+  }
+  .stat-card {
+    background: #fff; border: 0.5px solid #e0ddd8;
+    border-radius: 10px; padding: 16px 18px;
+  }
+  .stat-value { font-size: 28px; font-weight: 600; }
+  .stat-label { font-size: 12px; color: #888; margin-top: 2px; }
+  .stat-note  { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+  
+  .insight-card {
+    background: #fff; border: 0.5px solid #e0ddd8;
+    border-radius: 10px; padding: 18px 20px;
+    margin-bottom: 12px;
+    border-left: 4px solid #ccc;
+  }
+  .insight-card.sev-critical { border-left-color: #c0392b; }
+  .insight-card.sev-high     { border-left-color: #e67e22; }
+  .insight-card.sev-medium   { border-left-color: #f1c40f; }
+  .insight-card.sev-low      { border-left-color: #27ae60; }
+
+  .insight-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .sev-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .sev-dot.sev-critical { background: #c0392b; }
+  .sev-dot.sev-high     { background: #e67e22; }
+  .sev-dot.sev-medium   { background: #f1c40f; }
+  .sev-dot.sev-low      { background: #27ae60; }
+
+  .insight-title  { font-weight: 600; font-size: 14px; flex: 1; }
+  .insight-detail { font-size: 13px; color: #555; margin-bottom: 10px; }
+  .insight-fix {
+    font-size: 13px; background: #f8f7f3;
+    border-radius: 6px; padding: 8px 12px; color: #333;
+  }
+  .fix-label { font-weight: 600; }
+
+  .badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500;
+  }
+  .platform-badge { background: #eee; color: #555; }
+  .brand-badge    { background: #e8f0fe; color: #1a56db; }
+
+  .brand-section {
+    background: #fff; border: 0.5px solid #e0ddd8;
+    border-radius: 10px; padding: 24px; margin-bottom: 20px;
+  }
+  .brand-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .brand-name { font-size: 18px; font-weight: 600; }
+  .brand-id   { font-size: 11px; color: #aaa; font-family: monospace; }
+  .success-badge {
+    font-size: 12px; background: #d4edda; color: #155724;
+    padding: 3px 10px; border-radius: 20px; font-weight: 500;
+  }
+  .flagged-badge {
+    font-size: 12px; background: #fef3c7; color: #92400e;
+    padding: 3px 10px; border-radius: 20px; font-weight: 500;
+  }
+
+  .metrics-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  .metrics-table th {
+    text-align: left; font-size: 11px; color: #999;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 6px 10px; border-bottom: 0.5px solid #eee;
+  }
+  .metrics-table td {
+    padding: 9px 10px; border-bottom: 0.5px solid #f0ede8; font-size: 13px;
+  }
+  .metric-val { font-weight: 600; }
+  .metric-val.bad  { color: #c0392b; }
+  .metric-val.warn { color: #e67e22; }
+  .metric-val.good { color: #27ae60; }
+
+  h4 {
+    font-size: 12px; font-weight: 600; color: #666;
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px;
+  }
+
+  .flagged-table { width: 100%; border-collapse: collapse; }
+  .flagged-table th {
+    text-align: left; font-size: 11px; color: #999;
+    text-transform: uppercase; padding: 5px 8px; border-bottom: 0.5px solid #eee;
+  }
+  .flagged-table td {
+    padding: 7px 8px; border-bottom: 0.5px solid #f5f3ef; font-size: 12px;
+  }
+  .conv-id  { font-family: monospace; color: #888; font-size: 11px; }
+  .more-note { font-size: 11px; color: #aaa; margin-top: 8px; }
+
+  .footer {
+    margin-top: 60px; padding-top: 20px;
+    border-top: 0.5px solid #ddd;
+    font-size: 12px; color: #bbb; text-align: center;
+  }
+
+  
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="report-header">
+    <div>
+      <div class="report-title">Helio — Conversation Analysis Report</div>
+      <div class="report-sub">Automated analysis across 3 brands · 300 conversations</div>
+      <div class="report-sub" style="margin-top: 8px;">
+        <a href="https://test-1-5gj6.onrender.com/" target="_blank" style="
+          color: #1a56db; 
+          text-decoration: none; 
+          font-weight: 700; 
+          background: #e8f0fe; 
+          padding: 8px 16px; 
+          border-radius: 6px; 
+          border: 1px solid #1a56db; 
+          display: inline-block;
+          font-size: 14px;
+        ">
+          <strong>View conversations here</strong> &rarr;
+        </a>
+      </div>
+    </div>
+    <div class="report-meta">Generated 08 April 2026, 00:32<br>Rule-based + AI analysis</div>
+  </div>
+
+  
+
+
+  <h2>Actionable Insights</h2>
+  
+        <div class="insight-card sev-high">
+            <div class="insight-header">
+                <span class="sev-dot sev-high"></span>
+                <span class="insight-title">69.0% of conversations have zero user engagement</span>
+                <span class="badge platform-badge">Platform-wide</span>
+            </div>
+            <p class="insight-detail">207 conversations had no product views, no quick action clicks, and no link clicks at all. Users typed but never interacted with anything the bot suggested.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Review how products are being presented. Consider adding quick-action buttons after product suggestions to reduce friction for the user.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-high">
+            <div class="insight-header">
+                <span class="sev-dot sev-high"></span>
+                <span class="insight-title">61.7% of conversations had products suggested but no product views</span>
+                <span class="badge platform-badge">Platform-wide</span>
+            </div>
+            <p class="insight-detail">In 185 conversations the agent returned product results but the user never clicked to view any of them. The suggestions aren't compelling enough to act on.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Improve product presentation — include prices, availability, and short descriptions inline. Users shouldn't have to click just to find out if a product is relevant.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-high">
+            <div class="insight-header">
+                <span class="sev-dot sev-high"></span>
+                <span class="insight-title">Brand A: 14.0% of conversations end with the user, not the bot</span>
+                <span class="badge brand-badge">Brand A</span>
+            </div>
+            <p class="insight-detail">14 conversations where the last message was from the user. The most common cause before dropoff is: unclear.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Review conversations where dropoff follows an empty product list or fallback response — those are the easiest wins to fix.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-high">
+            <div class="insight-header">
+                <span class="sev-dot sev-high"></span>
+                <span class="insight-title">Brand A: 40.0% of users never clicked anything</span>
+                <span class="badge brand-badge">Brand A</span>
+            </div>
+            <p class="insight-detail">Users are typing and receiving replies but not interacting with products or quick actions. Average product views per conversation: 0.25.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Add interactive elements — quick-action buttons, product carousels, or 'View product' links directly in the chat to reduce the effort needed to engage.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-high">
+            <div class="insight-header">
+                <span class="sev-dot sev-high"></span>
+                <span class="insight-title">Brand B has a 18.0% product mismatch rate</span>
+                <span class="badge brand-badge">Brand B</span>
+            </div>
+            <p class="insight-detail">The bot is suggesting products from the wrong category (e.g. user asks about hair, bot suggests face products). This affects 18 conversations.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Review the product retrieval logic for this brand. Add stronger category filters based on detected body-part keywords in user queries.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-high">
+            <div class="insight-header">
+                <span class="sev-dot sev-high"></span>
+                <span class="insight-title">Brand B: 87.0% of users never clicked anything</span>
+                <span class="badge brand-badge">Brand B</span>
+            </div>
+            <p class="insight-detail">Users are typing and receiving replies but not interacting with products or quick actions. Average product views per conversation: 0.02.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Add interactive elements — quick-action buttons, product carousels, or 'View product' links directly in the chat to reduce the effort needed to engage.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-high">
+            <div class="insight-header">
+                <span class="sev-dot sev-high"></span>
+                <span class="insight-title">Brand C: 10.0% of conversations end with the user, not the bot</span>
+                <span class="badge brand-badge">Brand C</span>
+            </div>
+            <p class="insight-detail">10 conversations where the last message was from the user. The most common cause before dropoff is: empty products.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Review conversations where dropoff follows an empty product list or fallback response — those are the easiest wins to fix.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-high">
+            <div class="insight-header">
+                <span class="sev-dot sev-high"></span>
+                <span class="insight-title">Brand C: 80.0% of users never clicked anything</span>
+                <span class="badge brand-badge">Brand C</span>
+            </div>
+            <p class="insight-detail">Users are typing and receiving replies but not interacting with products or quick actions. Average product views per conversation: 0.06.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Add interactive elements — quick-action buttons, product carousels, or 'View product' links directly in the chat to reduce the effort needed to engage.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-medium">
+            <div class="insight-header">
+                <span class="sev-dot sev-medium"></span>
+                <span class="insight-title">51.3% of conversations are single-turn — user left after one exchange</span>
+                <span class="badge platform-badge">Platform-wide</span>
+            </div>
+            <p class="insight-detail">154 conversations had only one user message and one agent reply (or less). This suggests the first response isn't good enough to keep users engaged.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Improve the first response quality. End agent replies with a follow-up question or a 'You might also like' suggestion to encourage continued conversation.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-medium">
+            <div class="insight-header">
+                <span class="sev-dot sev-medium"></span>
+                <span class="insight-title">Brand A: Users are repeating the same question (7 times)</span>
+                <span class="badge brand-badge">Brand A</span>
+            </div>
+            <p class="insight-detail">Users re-sent the same message — the first answer didn't satisfy them.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Review repeated-question conversations. Check if the bot is giving unclear or incomplete answers on those topics.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-medium">
+            <div class="insight-header">
+                <span class="sev-dot sev-medium"></span>
+                <span class="insight-title">Brand B: Users are repeating the same question (8 times)</span>
+                <span class="badge brand-badge">Brand B</span>
+            </div>
+            <p class="insight-detail">Users re-sent the same message — the first answer didn't satisfy them.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Review repeated-question conversations. Check if the bot is giving unclear or incomplete answers on those topics.
+            </div>
+        </div>
+        
+
+  <h2>Per-Brand Detail</h2>
+  
+        <div class="brand-section">
+            <div class="brand-header">
+                <span class="brand-name">Brand A</span>
+                <span class="brand-id">680a0a8b70a26f7a0e24eedd</span>
+                <span class="success-badge">✓ 71.0% success</span>
+                <span class="flagged-badge">80 flagged</span>
+            </div>
+            <table class="metrics-table">
+                <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                <tbody><tr><td>Total Conversations</td><td class="metric-val ">100</td></tr><tr><td>Success Rate</td><td class="metric-val good">71.0%</td></tr><tr><td>Dropoff Rate</td><td class="metric-val good">14.0%</td></tr><tr><td>Frustration Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Dropoff Causes</td><td class="metric-val ">unclear: 10, empty products: 4</td></tr><tr><td>Fallback Response Rate</td><td class="metric-val good">1.0%</td></tr><tr><td>Repeated Question Rate</td><td class="metric-val good">7.0%</td></tr><tr><td>Single-Turn Rate</td><td class="metric-val bad">30.0%</td></tr><tr><td>Response Too Long Words Rate</td><td class="metric-val bad">31.0%</td></tr><tr><td>Zero Engagement Rate</td><td class="metric-val bad">40.0%</td></tr><tr><td>High Engagement Rate</td><td class="metric-val bad">5.0%</td></tr><tr><td>No Engagement After Suggestion</td><td class="metric-val bad">41.0%</td></tr><tr><td>Avg Product Views / Conv</td><td class="metric-val ">0.25</td></tr><tr><td>Avg Quick Actions / Conv</td><td class="metric-val ">0.41</td></tr><tr><td>Avg Conversation Duration</td><td class="metric-val ">9181.9s</td></tr><tr><td>Avg Text Turns</td><td class="metric-val ">5.1</td></tr><tr><td>Avg Agent Reply Length</td><td class="metric-val ">514 chars</td></tr><tr><td>Total Flagged Conversations</td><td class="metric-val ">80</td></tr></tbody>
+            </table>
+            
+            <h4>Flagged Conversations (all 80)</h4>
+            <table class="flagged-table">
+                <thead><tr><th>Conversation ID</th><th>Issues</th></tr></thead>
+                <tbody><tr><td class="conv-id">69c4f8e516599deb6989affe</td><td>repeated_question</td></tr><tr><td class="conv-id">69c4ef2306069052a32b5ccf</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4ed2706069052a32acd31</td><td>response_too_long_words</td></tr><tr><td class="conv-id">69c4e51406069052a329e000</td><td>agent_too_long  ·  response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c4e46006069052a329cdc0</td><td>response_too_long_words  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c4e42906069052a329c6f9</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c501db06069052a32e3d9a</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c5053706069052a32e9faa</td><td>response_too_long_words  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c4faa716599deb6989b00c</td><td>dropoff</td></tr><tr><td class="conv-id">69c4d1c906069052a3273953</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c4d4ef16599deb6989acfd</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c4c73606069052a325f064</td><td>response_too_long_words  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c4c4be06069052a325aef5</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c4b0cf80af262206b939d8</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c4b92106069052a324120f</td><td>dropoff  ·  no_engagement</td></tr><tr><td class="conv-id">69c4b106b69374161c562288</td><td>response_too_long_words  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c4a23cb69374161c5574cc</td><td>no_engagement</td></tr><tr><td class="conv-id">69c49eafb69374161c5548cd</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c499f716599deb6989a804</td><td>dropoff  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c4988280af262206b8858d</td><td>repeated_question  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c49531b69374161c54e67e</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c45ce8b69374161c534229</td><td>response_too_long_words  ·  repeated_product</td></tr><tr><td class="conv-id">69c450e5b69374161c52ee7d</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c46193b69374161c535f80</td><td>dropoff  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c44ccbb69374161c52d01c</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c44534b69374161c5287a2</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c41a3cb69374161c4fc3b3</td><td>dropoff  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c426e3b69374161c50d5c8</td><td>agent_too_long  ·  response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c4219a16599deb6989a4df</td><td>dropoff</td></tr><tr><td class="conv-id">69c40edb16599deb6989a3df</td><td>dropoff  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c4179fb69374161c4f8fb8</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c40de1b69374161c4e8b21</td><td>response_too_long_words  ·  repeated_product</td></tr><tr><td class="conv-id">69c40a6616599deb6989a398</td><td>repeated_question  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c3fbe8b69374161c4d27a7</td><td>response_too_long_words</td></tr><tr><td class="conv-id">69c3f91116599deb6989a29a</td><td>dropoff</td></tr><tr><td class="conv-id">69c3e842b69374161c4ad8f6</td><td>dropoff  ·  response_too_long_words  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3e59616599deb6989a16d</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c3da1cb69374161c496744</td><td>no_engagement</td></tr><tr><td class="conv-id">69c42519b69374161c50a694</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c3d653b69374161c49125f</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3d730b69374161c4924dd</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3d03416599deb69899ff9</td><td>dropoff</td></tr><tr><td class="conv-id">69c3d4c4b69374161c48eb4f</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3cfb516599deb69899fb5</td><td>repeated_question</td></tr><tr><td class="conv-id">69c3cbb9b69374161c477f5f</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c3cde9b69374161c481265</td><td>response_too_long_words  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c42081b69374161c50311a</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3c26e16599deb69899eaa</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c3c197b69374161c461f83</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3be5eb69374161c45c778</td><td>repeated_product</td></tr><tr><td class="conv-id">69c3b77bb69374161c45066a</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3b1d9b69374161c43d66c</td><td>dropoff  ·  repeated_product</td></tr><tr><td class="conv-id">69c3b14e16599deb69897021</td><td>response_too_long_words  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c3ae32b69374161c42ee64</td><td>agent_too_long  ·  response_too_long_words  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3ac3d16599deb69896d55</td><td>dropoff</td></tr><tr><td class="conv-id">69c3aa41b69374161c42325e</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3a0d2b69374161c413f38</td><td>no_engagement</td></tr><tr><td class="conv-id">69c38e0816599deb69896b22</td><td>fallback  ·  repeated_question  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c38b65b69374161c3d82e3</td><td>agent_too_long  ·  response_too_long_words  ·  repeated_product</td></tr><tr><td class="conv-id">69c384885287f2ec783a44fe</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c3857b5287f2ec783a6409</td><td>agent_too_long  ·  response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c381d616599deb6989662d</td><td>response_too_long_words  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c374b45287f2ec7837fc9e</td><td>response_too_long_words  ·  repeated_product</td></tr><tr><td class="conv-id">69c3a91316599deb69896cf8</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c435f9b69374161c51dd72</td><td>dropoff  ·  response_too_long_words  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c396f2b69374161c40270f</td><td>agent_too_long  ·  response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c39727b69374161c402dea</td><td>agent_too_long  ·  response_too_long_words</td></tr><tr><td class="conv-id">69c3716816599deb698963f6</td><td>response_too_long_words  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c3529f16599deb6989624a</td><td>dropoff  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c36f755287f2ec7837552b</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c367575287f2ec78365bfe</td><td>no_engagement</td></tr><tr><td class="conv-id">69c34e5d5287f2ec7834d4ad</td><td>response_too_long_words  ·  repeated_product</td></tr><tr><td class="conv-id">69c361195287f2ec7835e6bc</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c34ab25287f2ec7834aa24</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c370405287f2ec78377cf5</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c3493a5287f2ec78349758</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3489e5287f2ec7834911c</td><td>repeated_question  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c343a25287f2ec7834593d</td><td>repeated_product</td></tr><tr><td class="conv-id">69c33da05287f2ec7833d7eb</td><td>repeated_question  ·  response_too_long_words  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c33a905287f2ec7833bc49</td><td>repeated_product</td></tr></tbody>
+            </table>
+            
+        </div>
+        
+        <div class="brand-section">
+            <div class="brand-header">
+                <span class="brand-name">Brand B</span>
+                <span class="brand-id">6983153e1497a62e8542a0ad</span>
+                <span class="success-badge">✓ 79.0% success</span>
+                <span class="flagged-badge">96 flagged</span>
+            </div>
+            <table class="metrics-table">
+                <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                <tbody><tr><td>Total Conversations</td><td class="metric-val ">100</td></tr><tr><td>Success Rate</td><td class="metric-val good">79.0%</td></tr><tr><td>Dropoff Rate</td><td class="metric-val good">1.0%</td></tr><tr><td>Frustration Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Dropoff Causes</td><td class="metric-val ">unclear: 1</td></tr><tr><td>Fallback Response Rate</td><td class="metric-val good">3.0%</td></tr><tr><td>Repeated Question Rate</td><td class="metric-val good">8.0%</td></tr><tr><td>Single-Turn Rate</td><td class="metric-val bad">71.0%</td></tr><tr><td>Response Too Long Words Rate</td><td class="metric-val good">4.0%</td></tr><tr><td>Zero Engagement Rate</td><td class="metric-val bad">87.0%</td></tr><tr><td>High Engagement Rate</td><td class="metric-val bad">0.0%</td></tr><tr><td>No Engagement After Suggestion</td><td class="metric-val bad">74.0%</td></tr><tr><td>Avg Product Views / Conv</td><td class="metric-val ">0.02</td></tr><tr><td>Avg Quick Actions / Conv</td><td class="metric-val ">0.03</td></tr><tr><td>Avg Conversation Duration</td><td class="metric-val ">5604.8s</td></tr><tr><td>Avg Text Turns</td><td class="metric-val ">3.3</td></tr><tr><td>Avg Agent Reply Length</td><td class="metric-val ">518 chars</td></tr><tr><td>Total Flagged Conversations</td><td class="metric-val ">96</td></tr></tbody>
+            </table>
+            
+            <h4>Flagged Conversations (all 96)</h4>
+            <table class="flagged-table">
+                <thead><tr><th>Conversation ID</th><th>Issues</th></tr></thead>
+                <tbody><tr><td class="conv-id">69c504de06069052a32e9497</td><td>repeated_question  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c5014b06069052a32e2c4d</td><td>product_mismatch  ·  no_engagement</td></tr><tr><td class="conv-id">69c4ff2206069052a32de8b7</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4ffaa06069052a32df8b6</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4f3d206069052a32c6a7c</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4f04606069052a32b946a</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c4c25806069052a3254a02</td><td>product_mismatch  ·  repeated_question  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c4cd4706069052a326a002</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4c02606069052a324ec51</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4e86c06069052a32a443f</td><td>dropoff</td></tr><tr><td class="conv-id">69c4c0e906069052a3250406</td><td>product_mismatch  ·  no_engagement</td></tr><tr><td class="conv-id">69c48d8eb69374161c54a0f5</td><td>product_mismatch  ·  no_engagement</td></tr><tr><td class="conv-id">69c42dedb69374161c516845</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c435e2b69374161c51dbfa</td><td>no_engagement</td></tr><tr><td class="conv-id">69c44c0eb69374161c52c924</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c413a5b69374161c4f1519</td><td>repeated_question  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c40c10b69374161c4e627c</td><td>repeated_question  ·  no_engagement</td></tr><tr><td class="conv-id">69c4eeee06069052a32b514b</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4dfd806069052a3293ba1</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4da9006069052a3287bc8</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4e94206069052a32a5c52</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c40be3b69374161c4e5c36</td><td>repeated_question  ·  no_engagement</td></tr><tr><td class="conv-id">69c3fe8ab69374161c4d587b</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3e6a5b69374161c4a9fcc</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3db81b69374161c498197</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c3f169b69374161c4c47ef</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3d51bb69374161c48f438</td><td>product_mismatch  ·  repeated_question  ·  repeated_product</td></tr><tr><td class="conv-id">69c3d093b69374161c487b81</td><td>repeated_question  ·  no_engagement</td></tr><tr><td class="conv-id">69c3aa74b69374161c42378f</td><td>product_mismatch  ·  no_engagement</td></tr><tr><td class="conv-id">69c3a280b69374161c4166fd</td><td>no_engagement</td></tr><tr><td class="conv-id">69c39f67b69374161c411b6b</td><td>product_mismatch  ·  no_engagement</td></tr><tr><td class="conv-id">69c395b0b69374161c3ffa03</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c38cd5b69374161c3dfcde</td><td>no_engagement</td></tr><tr><td class="conv-id">69c38a69b69374161c3d627f</td><td>no_engagement</td></tr><tr><td class="conv-id">69c387405287f2ec783a9c88</td><td>repeated_question  ·  response_too_long_words  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c381945287f2ec7839df5f</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c37eeb5287f2ec78398bd8</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3e760b69374161c4ac9e4</td><td>no_engagement</td></tr><tr><td class="conv-id">69c378d75287f2ec78385b6b</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c366d95287f2ec783650f9</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c3c9e8b69374161c474c2b</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3c6c1b69374161c46e45e</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4dd7006069052a328e14b</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c3bc4ab69374161c458a3f</td><td>fallback  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c361555287f2ec7835ea29</td><td>no_engagement</td></tr><tr><td class="conv-id">69c366445287f2ec78364399</td><td>no_engagement</td></tr><tr><td class="conv-id">69c357bb5287f2ec78355926</td><td>product_mismatch  ·  no_engagement</td></tr><tr><td class="conv-id">69c353cf5287f2ec783520a7</td><td>product_mismatch  ·  no_engagement</td></tr><tr><td class="conv-id">69c3b689b69374161c44eb53</td><td>fallback  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c340ca5287f2ec78340e14</td><td>no_engagement</td></tr><tr><td class="conv-id">69c34b825287f2ec7834b418</td><td>no_engagement</td></tr><tr><td class="conv-id">69c2cbd75287f2ec782f5ac3</td><td>no_engagement</td></tr><tr><td class="conv-id">69c30d7d5287f2ec78324d3c</td><td>no_engagement</td></tr><tr><td class="conv-id">69c2a7455287f2ec782cb251</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c2789c696b82a9e9e66211</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c289165287f2ec78297415</td><td>no_engagement</td></tr><tr><td class="conv-id">69c2d1305287f2ec782fe0e8</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c275b4696b82a9e9e61bab</td><td>no_engagement</td></tr><tr><td class="conv-id">69c271ad696b82a9e9e58bd3</td><td>no_engagement</td></tr><tr><td class="conv-id">69c26b99696b82a9e9e4df77</td><td>no_engagement</td></tr><tr><td class="conv-id">69c26b7f696b82a9e9e4dc3c</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c259c52127ff0f141e90ef</td><td>no_engagement</td></tr><tr><td class="conv-id">69c24eb62127ff0f141d7b61</td><td>no_engagement</td></tr><tr><td class="conv-id">69c241425c221e72d05edbe5</td><td>no_engagement</td></tr><tr><td class="conv-id">69c23feb5c221e72d05ebd96</td><td>no_engagement</td></tr><tr><td class="conv-id">69c2363fc5090237eb2909b9</td><td>product_mismatch  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c2d6765287f2ec78305839</td><td>no_engagement</td></tr><tr><td class="conv-id">69c2d3c65287f2ec7830309e</td><td>no_engagement</td></tr><tr><td class="conv-id">69c2d14d5287f2ec782fe4b3</td><td>product_mismatch  ·  no_engagement</td></tr><tr><td class="conv-id">69c2eab95287f2ec7831504a</td><td>product_mismatch  ·  no_engagement</td></tr><tr><td class="conv-id">69c228b5c5090237eb278869</td><td>no_engagement</td></tr><tr><td class="conv-id">69c17cd91866ef69c61a77a4</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c22459c5090237eb270cb8</td><td>no_engagement</td></tr><tr><td class="conv-id">69c1f731c5090237eb238a51</td><td>product_mismatch  ·  no_engagement</td></tr><tr><td class="conv-id">69c16ecf1866ef69c6197eac</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c169981866ef69c619165a</td><td>product_mismatch  ·  no_engagement</td></tr><tr><td class="conv-id">69c165f71866ef69c618d17d</td><td>no_engagement</td></tr><tr><td class="conv-id">69c161bf1866ef69c6187be5</td><td>product_mismatch  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c163ae1866ef69c618a465</td><td>no_engagement</td></tr><tr><td class="conv-id">69c15d2f1866ef69c61821fe</td><td>no_engagement</td></tr><tr><td class="conv-id">69c13ec51866ef69c615afdd</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c1662b1866ef69c618d527</td><td>no_engagement</td></tr><tr><td class="conv-id">69c135b01866ef69c614ec00</td><td>product_mismatch  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c13da11866ef69c6159b49</td><td>no_engagement</td></tr><tr><td class="conv-id">69c1287f1866ef69c6137bf9</td><td>fallback  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c125631866ef69c6132fdf</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c137591866ef69c6151424</td><td>no_engagement</td></tr><tr><td class="conv-id">69c11af888180372f237c640</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c11c0788180372f237e130</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c19b331866ef69c61bf999</td><td>no_engagement</td></tr><tr><td class="conv-id">69c183841866ef69c61ade32</td><td>no_engagement</td></tr><tr><td class="conv-id">69c20c80c5090237eb24ab83</td><td>no_engagement</td></tr><tr><td class="conv-id">69c178881866ef69c61a2b7e</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c118ff88180372f23792c2</td><td>product_mismatch  ·  response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c220ccc5090237eb26a71a</td><td>product_mismatch  ·  no_engagement</td></tr><tr><td class="conv-id">69c1174d88180372f2376bc6</td><td>no_engagement</td></tr></tbody>
+            </table>
+            
+        </div>
+        
+        <div class="brand-section">
+            <div class="brand-header">
+                <span class="brand-name">Brand C</span>
+                <span class="brand-id">69a92ad76dcbf2da868e0f9b</span>
+                <span class="success-badge">✓ 75.0% success</span>
+                <span class="flagged-badge">93 flagged</span>
+            </div>
+            <table class="metrics-table">
+                <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                <tbody><tr><td>Total Conversations</td><td class="metric-val ">100</td></tr><tr><td>Success Rate</td><td class="metric-val good">75.0%</td></tr><tr><td>Dropoff Rate</td><td class="metric-val good">10.0%</td></tr><tr><td>Frustration Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Dropoff Causes</td><td class="metric-val ">empty products: 6, unclear: 4</td></tr><tr><td>Fallback Response Rate</td><td class="metric-val good">3.0%</td></tr><tr><td>Repeated Question Rate</td><td class="metric-val good">3.0%</td></tr><tr><td>Single-Turn Rate</td><td class="metric-val bad">53.0%</td></tr><tr><td>Response Too Long Words Rate</td><td class="metric-val warn">22.0%</td></tr><tr><td>Zero Engagement Rate</td><td class="metric-val bad">80.0%</td></tr><tr><td>High Engagement Rate</td><td class="metric-val bad">2.0%</td></tr><tr><td>No Engagement After Suggestion</td><td class="metric-val bad">70.0%</td></tr><tr><td>Avg Product Views / Conv</td><td class="metric-val ">0.06</td></tr><tr><td>Avg Quick Actions / Conv</td><td class="metric-val ">0.08</td></tr><tr><td>Avg Conversation Duration</td><td class="metric-val ">850.6s</td></tr><tr><td>Avg Text Turns</td><td class="metric-val ">4.1</td></tr><tr><td>Avg Agent Reply Length</td><td class="metric-val ">519 chars</td></tr><tr><td>Total Flagged Conversations</td><td class="metric-val ">93</td></tr></tbody>
+            </table>
+            
+            <h4>Flagged Conversations (all 93)</h4>
+            <table class="flagged-table">
+                <thead><tr><th>Conversation ID</th><th>Issues</th></tr></thead>
+                <tbody><tr><td class="conv-id">69c506d006069052a32ecdb8</td><td>no_engagement</td></tr><tr><td class="conv-id">69c5063d16599deb6989b123</td><td>no_engagement</td></tr><tr><td class="conv-id">69c502f306069052a32e5841</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c5002b06069052a32e06e4</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c4fa5306069052a32d480c</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c4ee8c06069052a32b4190</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4e3cf06069052a329bcf9</td><td>dropoff  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c4f34606069052a32c50eb</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4f11906069052a32bce26</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4dfc106069052a329379d</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4dbc906069052a328a731</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c4cb2906069052a326642b</td><td>dropoff  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c4d50906069052a3279e89</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4c73506069052a325f054</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c4c3ab06069052a325858f</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c4c6e306069052a325e8ee</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4c24106069052a3254285</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c4b25e80af262206b94910</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c4b8a406069052a323fef0</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4ab8fb69374161c55e4c8</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4e12e06069052a3296a91</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c47f67b69374161c542c11</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c47b1cb69374161c540c79</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c4789180af262206b7e4df</td><td>no_engagement</td></tr><tr><td class="conv-id">69c49219b69374161c54c8ed</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c451ffb69374161c52f6ee</td><td>no_engagement</td></tr><tr><td class="conv-id">69c45432b69374161c530648</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c4e2cb06069052a329a1b5</td><td>no_engagement</td></tr><tr><td class="conv-id">69c443e1b69374161c527a4e</td><td>response_too_long_words  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c4df5a06069052a3292922</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4df4306069052a3292743</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c4df8106069052a3293020</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c4a597b69374161c559de5</td><td>dropoff  ·  no_engagement</td></tr><tr><td class="conv-id">69c436dbb69374161c51ea49</td><td>dropoff  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c42ea2b69374161c517392</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c49feb80af262206b8af11</td><td>dropoff  ·  no_engagement</td></tr><tr><td class="conv-id">69c42d84b69374161c5160e9</td><td>no_engagement</td></tr><tr><td class="conv-id">69c425bcb69374161c50b690</td><td>fallback  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c4214db69374161c503f79</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4226ab69374161c505d0c</td><td>response_too_long_words  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c41f80b69374161c5020ec</td><td>response_too_long_words  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c41873b69374161c4fa128</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c41535b69374161c4f47cf</td><td>repeated_question  ·  repeated_product</td></tr><tr><td class="conv-id">69c41252b69374161c4eecde</td><td>no_engagement</td></tr><tr><td class="conv-id">69c40394b69374161c4dbaab</td><td>response_too_long_words  ·  repeated_product</td></tr><tr><td class="conv-id">69c40178b69374161c4d9170</td><td>response_too_long_words  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3ff5bb69374161c4d68b6</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c3fe20b69374161c4d5073</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3fc4ab69374161c4d2de8</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3fac5b69374161c4d0e47</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3fa6ab69374161c4d06d5</td><td>dropoff  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c40dceb69374161c4e89fa</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3f9cab69374161c4cfadf</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3f959b69374161c4cf2d6</td><td>dropoff  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c410feb69374161c4ec90b</td><td>dropoff  ·  repeated_product</td></tr><tr><td class="conv-id">69c40a49b69374161c4e3f40</td><td>no_engagement</td></tr><tr><td class="conv-id">69c40cb0b69374161c4e708e</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c406eab69374161c4dfc8a</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c407cfb69374161c4e11e5</td><td>dropoff  ·  no_products_at_all</td></tr><tr><td class="conv-id">69c3f5b2b69374161c4caecf</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c3f88cb69374161c4ce337</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3e83ab69374161c4ad884</td><td>response_too_long_words  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3f312b69374161c4c7e01</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3edc8b69374161c4baf86</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3db91b69374161c498398</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3e3c9b69374161c4a3446</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c3e34316599deb6989a143</td><td>repeated_question</td></tr><tr><td class="conv-id">69c3d792b69374161c492b4f</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3d781b69374161c492a0c</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c3cef3b69374161c483215</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3c701b69374161c46ec5f</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3ca84b69374161c475cf8</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3c43fb69374161c467498</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3cdccb69374161c480774</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c3c123b69374161c46137e</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3b30eb69374161c4410ae</td><td>response_too_long_words  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3b2b6b69374161c4400a1</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3b053b69374161c438d85</td><td>fallback  ·  no_engagement</td></tr><tr><td class="conv-id">69c3db14b69374161c497a5b</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c3ab9eb69374161c4258ea</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c3a4ddb69374161c41aee6</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3a6e9b69374161c41e154</td><td>repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3971eb69374161c402d2d</td><td>dropoff  ·  fallback  ·  repeated_question  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c3a321b69374161c41768c</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c39275b69374161c3f8bb7</td><td>no_products_at_all</td></tr><tr><td class="conv-id">69c39fb4b69374161c41249c</td><td>no_engagement</td></tr><tr><td class="conv-id">69c38f4f16599deb69896b2b</td><td>no_engagement</td></tr><tr><td class="conv-id">69c387195287f2ec783a971b</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c3892d5287f2ec783ae398</td><td>no_engagement</td></tr><tr><td class="conv-id">69c386f05287f2ec783a90bb</td><td>no_engagement</td></tr><tr><td class="conv-id">69c39238b69374161c3f867f</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c3938db69374161c3fadb0</td><td>response_too_long_words  ·  repeated_product  ·  no_engagement</td></tr><tr><td class="conv-id">69c38fbfb69374161c3ed6ef</td><td>no_engagement</td></tr></tbody>
+            </table>
+            
+        </div>
+        
+
+  <div class="footer">
+    Helio Conversation Analyzer · Rule-based + AI analysis on 300 conversations across 3 brands
+  </div>
+
+</div>
+
+</body>
+</html>
