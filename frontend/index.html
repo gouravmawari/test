@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Helio — Conversation Analysis Report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f4f3ef;
+    color: #1a1917;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .report-header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 2px solid #1a1917; padding-bottom: 16px; margin-bottom: 40px;
+  }
+  .report-title { font-size: 26px; font-weight: 600; letter-spacing: -0.5px; }
+  .report-sub { font-size: 13px; color: #666; margin-top: 4px; }
+  .report-meta { font-size: 12px; color: #999; text-align: right; }
+
+  h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #666;
+    margin: 48px 0 20px; padding-bottom: 8px;
+    border-bottom: 0.5px solid #ddd;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px; margin-bottom: 8px;
+  }
+  .stat-card {
+    background: #fff; border: 0.5px solid #e0ddd8;
+    border-radius: 10px; padding: 16px 18px;
+  }
+  .stat-value { font-size: 28px; font-weight: 600; }
+  .stat-label { font-size: 12px; color: #888; margin-top: 2px; }
+  .stat-note  { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+  
+  .insight-card {
+    background: #fff; border: 0.5px solid #e0ddd8;
+    border-radius: 10px; padding: 18px 20px;
+    margin-bottom: 12px;
+    border-left: 4px solid #ccc;
+  }
+  .insight-card.sev-critical { border-left-color: #c0392b; }
+  .insight-card.sev-high     { border-left-color: #e67e22; }
+  .insight-card.sev-medium   { border-left-color: #f1c40f; }
+  .insight-card.sev-low      { border-left-color: #27ae60; }
+
+  .insight-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .sev-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .sev-dot.sev-critical { background: #c0392b; }
+  .sev-dot.sev-high     { background: #e67e22; }
+  .sev-dot.sev-medium   { background: #f1c40f; }
+  .sev-dot.sev-low      { background: #27ae60; }
+
+  .insight-title  { font-weight: 600; font-size: 14px; flex: 1; }
+  .insight-detail { font-size: 13px; color: #555; margin-bottom: 10px; }
+  .insight-fix {
+    font-size: 13px; background: #f8f7f3;
+    border-radius: 6px; padding: 8px 12px; color: #333;
+  }
+  .fix-label { font-weight: 600; }
+
+  .badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500;
+  }
+  .platform-badge { background: #eee; color: #555; }
+  .brand-badge    { background: #e8f0fe; color: #1a56db; }
+
+  .brand-section {
+    background: #fff; border: 0.5px solid #e0ddd8;
+    border-radius: 10px; padding: 24px; margin-bottom: 20px;
+  }
+  .brand-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .brand-name { font-size: 18px; font-weight: 600; }
+  .brand-id   { font-size: 11px; color: #aaa; font-family: monospace; }
+  .success-badge {
+    font-size: 12px; background: #d4edda; color: #155724;
+    padding: 3px 10px; border-radius: 20px; font-weight: 500;
+  }
+  .flagged-badge {
+    font-size: 12px; background: #fef3c7; color: #92400e;
+    padding: 3px 10px; border-radius: 20px; font-weight: 500;
+  }
+
+  .metrics-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  .metrics-table th {
+    text-align: left; font-size: 11px; color: #999;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 6px 10px; border-bottom: 0.5px solid #eee;
+  }
+  .metrics-table td {
+    padding: 9px 10px; border-bottom: 0.5px solid #f0ede8; font-size: 13px;
+  }
+  .metric-val { font-weight: 600; }
+  .metric-val.bad  { color: #c0392b; }
+  .metric-val.warn { color: #e67e22; }
+  .metric-val.good { color: #27ae60; }
+
+  h4 {
+    font-size: 12px; font-weight: 600; color: #666;
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px;
+  }
+
+  .flagged-table { width: 100%; border-collapse: collapse; }
+  .flagged-table th {
+    text-align: left; font-size: 11px; color: #999;
+    text-transform: uppercase; padding: 5px 8px; border-bottom: 0.5px solid #eee;
+  }
+  .flagged-table td {
+    padding: 7px 8px; border-bottom: 0.5px solid #f5f3ef; font-size: 12px;
+  }
+  .conv-id  { font-family: monospace; color: #888; font-size: 11px; }
+  .more-note { font-size: 11px; color: #aaa; margin-top: 8px; }
+
+  .footer {
+    margin-top: 60px; padding-top: 20px;
+    border-top: 0.5px solid #ddd;
+    font-size: 12px; color: #bbb; text-align: center;
+  }
+
+  
+    .ai-details-section {
+        background: #fff;
+        border: 0.5px solid #e0ddd8;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .ai-details-section h3 {
+        font-size: 14px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 15px;
+    }
+    .ai-details-section h4 {
+        font-size: 12px;
+        font-weight: 600;
+        color: #666;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+    .ai-details-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .ai-tab {
+        padding: 8px 16px;
+        border: none;
+        background: #f0f0f0;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .ai-tab:hover {
+        background: #e0e0e0;
+    }
+    .ai-tab.active {
+        background: #3498db;
+        color: white;
+    }
+    .ai-tab-content {
+        display: none;
+    }
+    .ai-tab-content.active {
+        display: block;
+    }
+    .ai-detail-card {
+        background: #f8f9fa;
+        border-left: 4px solid #3498db;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 12px;
+    }
+    .ai-detail-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+    .ai-detail-title {
+        font-weight: 600;
+        font-size: 13px;
+        color: #333;
+    }
+    .ai-detail-badge {
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+    .ai-detail-text {
+        font-size: 12px;
+        color: #555;
+        margin: 5px 0;
+        line-height: 1.5;
+    }
+    .ai-detail-detail {
+        font-size: 12px;
+        color: #666;
+        margin: 8px 0 5px;
+        padding: 8px;
+        background: #fff;
+        border-radius: 4px;
+    }
+    .ai-detail-meta {
+        font-size: 11px;
+        color: #999;
+        margin-top: 8px;
+    }
+    .summaries-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .summary-item {
+        display: flex;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+        font-size: 12px;
+    }
+    .summary-item:hover {
+        background: #f8f9fa;
+    }
+    .summary-id {
+        width: 120px;
+        font-family: monospace;
+        color: #888;
+        flex-shrink: 0;
+    }
+    .summary-text {
+        color: #333;
+        flex: 1;
+    }
+    .no-data {
+        color: #999;
+        font-style: italic;
+        font-size: 13px;
+    }
+    
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="report-header">
+    <div>
+      <div class="report-title">Helio — Conversation Analysis Report</div>
+      <div class="report-sub">Automated analysis across 3 brands · 26 conversations</div>
+    </div>
+    <div class="report-meta">Generated 08 April 2026, 16:07<br>Rule-based + AI analysis</div>
+  </div>
+
+  
+        <h2>AI Analysis Overview</h2>
+        <div class="stat-grid">
+        <div class="stat-card">
+            <div class="stat-value">26</div>
+            <div class="stat-label">Conversations Analyzed by AI</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" style="color: #e67e22">3.5/5</div>
+            <div class="stat-label">Avg Quality Score</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" style="color: #27ae60">0.0%</div>
+            <div class="stat-label">Hallucination Rate</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">0.0%</div>
+            <div class="stat-label">Missed Intent Rate</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" style="color: #27ae60">6</div>
+            <div class="stat-label">Sentiment Improved</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" style="color: #c0392b">0</div>
+            <div class="stat-label">Sentiment Worsened</div>
+        </div>
+    </div>
+        
+    <div class="ai-details-section">
+        <h3>AI Analysis Details</h3>
+
+        <div class="ai-details-tabs">
+            <button class="ai-tab active" onclick="showAITab('hallucinations')">Hallucinations (0)</button>
+            <button class="ai-tab" onclick="showAITab('quality')">Quality (85)</button>
+            <button class="ai-tab" onclick="showAITab('missed')">Missed Intent (0)</button>
+            <button class="ai-tab" onclick="showAITab('sentiment')">Sentiment (6)</button>
+            <button class="ai-tab" onclick="showAITab('summaries')">Summaries (26)</button>
+        </div>
+
+        <div id="hallucinations" class="ai-tab-content active">
+            <h4>Detected Hallucinations</h4>
+            <p class="no-data">No hallucinations detected.</p>
+        </div>
+
+        <div id="quality" class="ai-tab-content">
+            <h4>Response Quality Ratings</h4>
+            
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Where is my order?</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> To track your order, please share both your order number and the phone number used when placing the ...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> I have ordered blue tea</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> To track your order, please share both your order number and the phone number used when placing the ...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> I want to return the product because wrongly i have ordered blue tea  actually i want to order fatlo</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> I understand—you ordered the wrong product and need **Belly Fat Herbal Tea** instead.
+
+Unfortunately...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Send hi to me in WhatsApp</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> I'm a shopping assistant here on this platform—I can't send WhatsApp messages directly. 
+
+To reach o...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Your certification?</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> This product is crafted following authentic Ayurvedic principles, using pure herbs and natural ingre...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> I want to cancel my order</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> Thank you for reaching out. To cancel your order, please email cs@bluenectar.co.in or call/WhatsApp ...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Is it best for man dry skin</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> Yes, [**Shubhr Anti Aging Face Cream for Men with Saffron & Sandalwood (14 Herbs, 50g)**](https://ww...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> A2 milk ghee</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> For those seeking the benefits of A2 milk ghee, here are some nurturing options rooted in Ayurvedic ...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Coupon</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> Thank you for your interest. Currently, there is no information available regarding coupon codes or ...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> How do I use it daily? shop-neem-tablet-complete-skin-care</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> For daily use of the [**Neem Tablet - Complete Skin Care, 60 Tabs | 300 mg**](https://www.srisritatt...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> What health benefits does it offer? shop-neem-tablet-complete-skin-care</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> [**Neem Tablet - Complete Skin Care, 60 Tabs | 300 mg**](https://www.srisritattva.com/products/shop-...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Is it safe for long-term use? deep-slp-for-better-sleep-100-tabs-1000-mg</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> [**DEEP-SLP Tablets for Better Sleep | 1000 mg**](https://www.srisritattva.com/products/deep-slp-for...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Is it safe no side effect</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> [**DEEP-SLP Tablets for Better Sleep | 1000 mg**](https://www.srisritattva.com/products/deep-slp-for...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Ingredients please</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> The key ingredients in [**DEEP-SLP Tablets for Better Sleep | 1000 mg**](https://www.srisritattva.co...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Any gummies are juice like syrup?</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> If you prefer a juice-like syrup over tablets, you may like this option:
+
+[**Medhya Rasayana Syrup -...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> What health benefits does it offer? shop-amla-anti-oxidant</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> [**Amla - Anti Oxidant**](https://www.srisritattva.com/products/shop-amla-anti-oxidant) harnesses th...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Is it safe for long-term use? shop-amla-anti-oxidant</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> [**Amla - Anti Oxidant**](https://www.srisritattva.com/products/shop-amla-anti-oxidant) is tradition...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Does it help with hairfall</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> Yes, [**Amla - Anti Oxidant**](https://www.srisritattva.com/products/shop-amla-anti-oxidant) is well...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Is it safe for long-term use? henna-shikakai-shampoo-for-silky-smooth-conditioned-hair-200ml</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> [**Henna Shikakai Shampoo - For Silky Smooth & Conditioned Hair, 200 ml**](https://www.srisritattva....</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Add "Henna Shikakai Shampoo - For Silky Smooth & Conditioned Hair, 200 ml" to cart</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> ✅ Added "Henna Shikakai Shampoo - For Silky Smooth & Conditioned Hair, 200 ml" to your cart!...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> What health benefits does it offer? shop-liv-on-liver-tonic</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> [**Liv-On - Liver Tonic**](https://www.srisritattva.com/products/shop-liv-on-liver-tonic) offers hol...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Какие есть у вас препараты от камней в желчном пузыре?</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> Для поддержки при камнях в желчном пузыре в нашем ассортименте есть аюрведические средства, направле...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Что есть для размягчения желчных камней?</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> Для размягчения желчных камней в нашем ассортименте есть аюрведические средства, которые способствую...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> What health benefits does it offer? arogyavardhini-gutika-50-tabs-250-mg</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> [**Arogyavardhini Vati, Tablets | 250 mg**](https://www.srisritattva.com/products/arogyavardhini-gut...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Why there is rate difference???</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> Thanks for asking! Price differences on our site can happen for a few reasons:
+
+**Product Variations...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> I have PCOD I have a desk job and need to loose good amount of weight</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> For PCOD and weight management, we have two excellent herbal infusions to support your wellness jour...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Best tea to reduce belly fat and overall body weight</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> For belly fat and weight loss, our **Belly Fat herbal infusion** is specifically designed to boost m...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Overthinking</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> When your mind won't settle, a calming herbal infusion can help you find peace. Here are our best op...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Over weight</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> For weight management, we have herbal infusions designed to support your wellness journey naturally....</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Is it allowed for breastfeeding mothers ?</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> That's a thoughtful question. Our products are **100% organic, herbal, and natural** with no known s...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> I want to edit my order</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> Thanks for reaching out! Unfortunately, **once an order is processed or dispatched, it cannot be edi...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> I want to cancel the order</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> I understand. **Cancellations are generally not allowed once an order is processed or dispatched.**
+...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> 8546095168</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> Thank you for providing your phone number. Our team will look up your order and review your cancella...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Can this be used in a daily routine? anti-aging-cream-for-women-best-anti-wrinkle-cream-moisturizer-</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> Yes, [**Shubhr Anti Aging Cream for Women for Face with Saffron and Sandalwood (14 herbs, 50g)**](ht...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Hi</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> Hello! If you have any questions about [**Shubhr Niacinamide Under Eye Serum for Dark Circles (17 He...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> dark circles complite remove for serum</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> For reducing dark circles with a natural, Ayurvedic approach, I recommend this serum:
+
+[**Shubhr Nia...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> How do I use it daily? kumkumadi-oil-18ml-by-shankara</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> For daily use of [**Kumkumadi Oil, by Shankara - 18 ml**](https://www.srisritattva.com/products/kumk...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> How long should kept after applying kumkumadi oil</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> After applying [**Kumkumadi Oil, by Shankara - 18 ml**](https://www.srisritattva.com/products/kumkum...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> With what we should wash it</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> After letting [**Kumkumadi Oil, by Shankara - 18 ml**](https://www.srisritattva.com/products/kumkuma...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Who should use this product? shop-shwasa-shuddhi-vati-broncho-dilator</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> [**Shwasa Shuddhi Vati - Broncho Dilator**](https://www.srisritattva.com/products/shop-shwasa-shuddh...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> What health benefits does it offer? dateprash-with-walnuts-ayurvedic-jam-for-immunity-ayurvedic-immu</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> [**Dateprash with Walnuts – Ayurvedic Jam for Immunity | Ayurvedic Immunity Booster | 40+ Ayurvedic ...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+                    <div class="ai-detail-card">
+                        <div class="ai-detail-header">
+                            <span class="ai-detail-title">Response Quality: 4/5</span>
+                            <span class="ai-detail-badge" style="background: #3498db; color: white;">Good</span>
+                        </div>
+                        <p class="ai-detail-text"><strong>Customer:</strong> Who should use this product? shop-oorja-forte-60tabs</p>
+                        <p class="ai-detail-text"><strong>Bot:</strong> [**Oorja Forte**](https://www.srisritattva.com/products/shop-oorja-forte-60tabs) is ideal for indivi...</p>
+                        <p class="ai-detail-detail">reranked</p>
+                    </div>
+                    
+        </div>
+
+        <div id="missed" class="ai-tab-content">
+            <h4>Missed Buying Intents</h4>
+            <p class="no-data">No missed intents detected.</p>
+        </div>
+
+        <div id="sentiment" class="ai-tab-content">
+            <h4>Sentiment Analysis</h4>
+            
+            <div class="ai-detail-card">
+                <div class="ai-detail-header">
+                    <span class="ai-detail-title">Sentiment: Improved</span>
+                    <span class="ai-detail-badge" style="background: #27ae60; color: white;">IMPROVED</span>
+                </div>
+                <p class="ai-detail-detail">Evaluated via cohere/rerank-4-pro</p>
+                <div class="ai-detail-meta">
+                    <span>Start: neutral → End: positive</span>
+                </div>
+            </div>
+            
+            <div class="ai-detail-card">
+                <div class="ai-detail-header">
+                    <span class="ai-detail-title">Sentiment: Improved</span>
+                    <span class="ai-detail-badge" style="background: #27ae60; color: white;">IMPROVED</span>
+                </div>
+                <p class="ai-detail-detail">Evaluated via cohere/rerank-4-pro</p>
+                <div class="ai-detail-meta">
+                    <span>Start: neutral → End: positive</span>
+                </div>
+            </div>
+            
+            <div class="ai-detail-card">
+                <div class="ai-detail-header">
+                    <span class="ai-detail-title">Sentiment: Improved</span>
+                    <span class="ai-detail-badge" style="background: #27ae60; color: white;">IMPROVED</span>
+                </div>
+                <p class="ai-detail-detail">Evaluated via cohere/rerank-4-pro</p>
+                <div class="ai-detail-meta">
+                    <span>Start: neutral → End: positive</span>
+                </div>
+            </div>
+            
+            <div class="ai-detail-card">
+                <div class="ai-detail-header">
+                    <span class="ai-detail-title">Sentiment: Improved</span>
+                    <span class="ai-detail-badge" style="background: #27ae60; color: white;">IMPROVED</span>
+                </div>
+                <p class="ai-detail-detail">Evaluated via cohere/rerank-4-pro</p>
+                <div class="ai-detail-meta">
+                    <span>Start: neutral → End: positive</span>
+                </div>
+            </div>
+            
+            <div class="ai-detail-card">
+                <div class="ai-detail-header">
+                    <span class="ai-detail-title">Sentiment: Improved</span>
+                    <span class="ai-detail-badge" style="background: #27ae60; color: white;">IMPROVED</span>
+                </div>
+                <p class="ai-detail-detail">Evaluated via cohere/rerank-4-pro</p>
+                <div class="ai-detail-meta">
+                    <span>Start: neutral → End: positive</span>
+                </div>
+            </div>
+            
+            <div class="ai-detail-card">
+                <div class="ai-detail-header">
+                    <span class="ai-detail-title">Sentiment: Improved</span>
+                    <span class="ai-detail-badge" style="background: #27ae60; color: white;">IMPROVED</span>
+                </div>
+                <p class="ai-detail-detail">Evaluated via cohere/rerank-4-pro</p>
+                <div class="ai-detail-meta">
+                    <span>Start: neutral → End: positive</span>
+                </div>
+            </div>
+            
+        </div>
+
+        <div id="summaries" class="ai-tab-content">
+            <h4>Conversation Summaries</h4>
+            <div class="summaries-list">
+                
+            <div class="summary-item">
+                <span class="summary-id">69c5053f1659</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c505370606</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c502e51659</span>
+                <span class="summary-text">Empty conversation</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c4f3d20606</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c4f0460606</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c4eeee0606</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c4d5090606</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c4cb290606</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c4c7350606</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c45432b693</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c443e1b693</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c4214db693</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c3ca84b693</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c4d1c90606</span>
+                <span class="summary-text">Empty conversation</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c4c7360606</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c4c4be0606</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c4c3e40606</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c3ac3d1659</span>
+                <span class="summary-text">Empty conversation</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c3aa41b693</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            <div class="summary-item">
+                <span class="summary-id">69c3a9131659</span>
+                <span class="summary-text">{"fallback_response": {"detected": false, "details": []}, "product_mismatch": {"detected": false, "mismatches": []}, "conversation_success": {"is_successful": true, "reason": "Rerank Successful"}, "dropoff": {"detected": false, "cause": "none"}, "user_frustration": {"detected": false, "signals": []}, "repeated_questions": {"detected": false, "questions": []}, "repeated_product": {"detected": false, "products": []}, "overall_quality_score": 8, "summary": "Evaluated via cohere/rerank-4-pro", "hallucination_detected": false, "missed_intent_detected": false, "score": 4, "reason": "reranked", "sentiment_start": "neutral", "sentiment_end": "positive", "arc": "improved"}</span>
+            </div>
+            
+            </div>
+        </div>
+    </div>
+    
+        
+
+
+  <h2>Actionable Insights</h2>
+  
+        <div class="insight-card sev-high">
+            <div class="insight-header">
+                <span class="sev-dot sev-high"></span>
+                <span class="insight-title">80.8% of conversations have zero user engagement</span>
+                <span class="badge platform-badge">Platform-wide</span>
+            </div>
+            <p class="insight-detail">21 conversations had no product views, no quick action clicks, and no link clicks at all. Users typed but never interacted with anything the bot suggested.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Review how products are being presented. Consider adding quick-action buttons after product suggestions to reduce friction for the user.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-high">
+            <div class="insight-header">
+                <span class="sev-dot sev-high"></span>
+                <span class="insight-title">61.5% of conversations had products suggested but no product views</span>
+                <span class="badge platform-badge">Platform-wide</span>
+            </div>
+            <p class="insight-detail">In 16 conversations the agent returned product results but the user never clicked to view any of them. The suggestions aren't compelling enough to act on.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Improve product presentation — include prices, availability, and short descriptions inline. Users shouldn't have to click just to find out if a product is relevant.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-high">
+            <div class="insight-header">
+                <span class="sev-dot sev-high"></span>
+                <span class="insight-title">Brand A: 60.0% of users never clicked anything</span>
+                <span class="badge brand-badge">Brand A</span>
+            </div>
+            <p class="insight-detail">Users are typing and receiving replies but not interacting with products or quick actions. Average product views per conversation: 0.1.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Add interactive elements — quick-action buttons, product carousels, or 'View product' links directly in the chat to reduce the effort needed to engage.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-high">
+            <div class="insight-header">
+                <span class="sev-dot sev-high"></span>
+                <span class="insight-title">Brand B: 83.3% of users never clicked anything</span>
+                <span class="badge brand-badge">Brand B</span>
+            </div>
+            <p class="insight-detail">Users are typing and receiving replies but not interacting with products or quick actions. Average product views per conversation: 0.0.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Add interactive elements — quick-action buttons, product carousels, or 'View product' links directly in the chat to reduce the effort needed to engage.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-high">
+            <div class="insight-header">
+                <span class="sev-dot sev-high"></span>
+                <span class="insight-title">Brand C: 100.0% of users never clicked anything</span>
+                <span class="badge brand-badge">Brand C</span>
+            </div>
+            <p class="insight-detail">Users are typing and receiving replies but not interacting with products or quick actions. Average product views per conversation: 0.0.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Add interactive elements — quick-action buttons, product carousels, or 'View product' links directly in the chat to reduce the effort needed to engage.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-medium">
+            <div class="insight-header">
+                <span class="sev-dot sev-medium"></span>
+                <span class="insight-title">57.7% of conversations are single-turn — user left after one exchange</span>
+                <span class="badge platform-badge">Platform-wide</span>
+            </div>
+            <p class="insight-detail">15 conversations had only one user message and one agent reply (or less). This suggests the first response isn't good enough to keep users engaged.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Improve the first response quality. End agent replies with a follow-up question or a 'You might also like' suggestion to encourage continued conversation.
+            </div>
+        </div>
+        
+        <div class="insight-card sev-medium">
+            <div class="insight-header">
+                <span class="sev-dot sev-medium"></span>
+                <span class="insight-title">Brand B: Average conversation lasts only 24.3s</span>
+                <span class="badge brand-badge">Brand B</span>
+            </div>
+            <p class="insight-detail">Conversations are ending very quickly — users may be leaving immediately after receiving an unsatisfactory first response.</p>
+            <div class="insight-fix">
+                <span class="fix-label">Recommended fix:</span> Review the first agent response quality for this brand. A fast exit usually means the first reply missed the mark.
+            </div>
+        </div>
+        
+
+  <h2>Per-Brand Detail</h2>
+  
+        <div class="brand-section">
+            <div class="brand-header">
+                <span class="brand-name">Brand A</span>
+                <span class="brand-id">680a0a8b70a26f7a0e24eedd</span>
+                <span class="success-badge">✓ 70.0% success</span>
+                <span class="flagged-badge">4 flagged</span>
+            </div>
+            <table class="metrics-table">
+                <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                <tbody><tr><td>Total Conversations</td><td class="metric-val ">10</td></tr><tr><td>Success Rate</td><td class="metric-val good">70.0%</td></tr><tr><td>Dropoff Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Frustration Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Dropoff Causes</td><td class="metric-val ">—</td></tr><tr><td>Fallback Response Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Repeated Question Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Single-Turn Rate</td><td class="metric-val bad">60.0%</td></tr><tr><td>Response Too Long Words Rate</td><td class="metric-val warn">20.0%</td></tr><tr><td>Zero Engagement Rate</td><td class="metric-val bad">60.0%</td></tr><tr><td>High Engagement Rate</td><td class="metric-val bad">0.0%</td></tr><tr><td>No Engagement After Suggestion</td><td class="metric-val warn">20.0%</td></tr><tr><td>Avg Product Views / Conv</td><td class="metric-val ">0.1</td></tr><tr><td>Avg Quick Actions / Conv</td><td class="metric-val ">0.3</td></tr><tr><td>Avg Conversation Duration</td><td class="metric-val ">33.5s</td></tr><tr><td>Avg Text Turns</td><td class="metric-val ">2.6</td></tr><tr><td>Avg Agent Reply Length</td><td class="metric-val ">524 chars</td></tr><tr><td>Total Flagged Conversations</td><td class="metric-val ">4</td></tr></tbody>
+            </table>
+            
+            <h4>Flagged Conversations (all 4)</h4>
+            <table class="flagged-table">
+                <thead><tr><th>Conversation ID</th><th>Issues</th></tr></thead>
+                <tbody><tr><td class="conv-id">69c5053706069052a32e9faa</td><td>response_too_long_words</td></tr><tr><td class="conv-id">69c4c73606069052a325f064</td><td>response_too_long_words</td></tr><tr><td class="conv-id">69c4c4be06069052a325aef5</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3aa41b69374161c42325e</td><td>no_engagement</td></tr></tbody>
+            </table>
+            
+        </div>
+        
+        <div class="brand-section">
+            <div class="brand-header">
+                <span class="brand-name">Brand B</span>
+                <span class="brand-id">6983153e1497a62e8542a0ad</span>
+                <span class="success-badge">✓ 100.0% success</span>
+                <span class="flagged-badge">5 flagged</span>
+            </div>
+            <table class="metrics-table">
+                <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                <tbody><tr><td>Total Conversations</td><td class="metric-val ">6</td></tr><tr><td>Success Rate</td><td class="metric-val good">100.0%</td></tr><tr><td>Dropoff Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Frustration Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Dropoff Causes</td><td class="metric-val ">—</td></tr><tr><td>Fallback Response Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Repeated Question Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Single-Turn Rate</td><td class="metric-val bad">100.0%</td></tr><tr><td>Response Too Long Words Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Zero Engagement Rate</td><td class="metric-val bad">83.3%</td></tr><tr><td>High Engagement Rate</td><td class="metric-val bad">0.0%</td></tr><tr><td>No Engagement After Suggestion</td><td class="metric-val bad">83.3%</td></tr><tr><td>Avg Product Views / Conv</td><td class="metric-val ">0.0</td></tr><tr><td>Avg Quick Actions / Conv</td><td class="metric-val ">0.0</td></tr><tr><td>Avg Conversation Duration</td><td class="metric-val ">24.3s</td></tr><tr><td>Avg Text Turns</td><td class="metric-val ">2.0</td></tr><tr><td>Avg Agent Reply Length</td><td class="metric-val ">502 chars</td></tr><tr><td>Total Flagged Conversations</td><td class="metric-val ">5</td></tr></tbody>
+            </table>
+            
+            <h4>Flagged Conversations (all 5)</h4>
+            <table class="flagged-table">
+                <thead><tr><th>Conversation ID</th><th>Issues</th></tr></thead>
+                <tbody><tr><td class="conv-id">69c4f3d206069052a32c6a7c</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4eeee06069052a32b514b</td><td>no_engagement</td></tr><tr><td class="conv-id">69c366445287f2ec78364399</td><td>no_engagement</td></tr><tr><td class="conv-id">69c361555287f2ec7835ea29</td><td>no_engagement</td></tr><tr><td class="conv-id">69c357bb5287f2ec78355926</td><td>no_engagement</td></tr></tbody>
+            </table>
+            
+        </div>
+        
+        <div class="brand-section">
+            <div class="brand-header">
+                <span class="brand-name">Brand C</span>
+                <span class="brand-id">69a92ad76dcbf2da868e0f9b</span>
+                <span class="success-badge">✓ 100.0% success</span>
+                <span class="flagged-badge">9 flagged</span>
+            </div>
+            <table class="metrics-table">
+                <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                <tbody><tr><td>Total Conversations</td><td class="metric-val ">10</td></tr><tr><td>Success Rate</td><td class="metric-val good">100.0%</td></tr><tr><td>Dropoff Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Frustration Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Dropoff Causes</td><td class="metric-val ">—</td></tr><tr><td>Fallback Response Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Repeated Question Rate</td><td class="metric-val good">0.0%</td></tr><tr><td>Single-Turn Rate</td><td class="metric-val bad">30.0%</td></tr><tr><td>Response Too Long Words Rate</td><td class="metric-val warn">20.0%</td></tr><tr><td>Zero Engagement Rate</td><td class="metric-val bad">100.0%</td></tr><tr><td>High Engagement Rate</td><td class="metric-val bad">0.0%</td></tr><tr><td>No Engagement After Suggestion</td><td class="metric-val bad">90.0%</td></tr><tr><td>Avg Product Views / Conv</td><td class="metric-val ">0.0</td></tr><tr><td>Avg Quick Actions / Conv</td><td class="metric-val ">0.0</td></tr><tr><td>Avg Conversation Duration</td><td class="metric-val ">112.7s</td></tr><tr><td>Avg Text Turns</td><td class="metric-val ">4.6</td></tr><tr><td>Avg Agent Reply Length</td><td class="metric-val ">600 chars</td></tr><tr><td>Total Flagged Conversations</td><td class="metric-val ">9</td></tr></tbody>
+            </table>
+            
+            <h4>Flagged Conversations (all 9)</h4>
+            <table class="flagged-table">
+                <thead><tr><th>Conversation ID</th><th>Issues</th></tr></thead>
+                <tbody><tr><td class="conv-id">69c4d50906069052a3279e89</td><td>no_engagement</td></tr><tr><td class="conv-id">69c4c73506069052a325f054</td><td>no_engagement</td></tr><tr><td class="conv-id">69c45432b69374161c530648</td><td>no_engagement</td></tr><tr><td class="conv-id">69c443e1b69374161c527a4e</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c4214db69374161c503f79</td><td>no_engagement</td></tr><tr><td class="conv-id">69c3ca84b69374161c475cf8</td><td>no_engagement</td></tr><tr><td class="conv-id">69c436dbb69374161c51ea49</td><td>no_engagement</td></tr><tr><td class="conv-id">69c42ea2b69374161c517392</td><td>response_too_long_words  ·  no_engagement</td></tr><tr><td class="conv-id">69c42d84b69374161c5160e9</td><td>no_engagement</td></tr></tbody>
+            </table>
+            
+        </div>
+        
+
+  <div class="footer">
+    Helio Conversation Analyzer · Rule-based + AI analysis on 26 conversations across 3 brands
+  </div>
+
+</div>
+
+</body>
+</html>
